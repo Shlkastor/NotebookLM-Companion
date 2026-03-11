@@ -172,6 +172,8 @@ function buildHTML(): string {
       />
     </div>
 
+    <div class="nlm-toolbar__sep" aria-hidden="true"></div>
+
     <div class="nlm-toolbar__filters">
       <select class="nlm-filter-folder nlm-select" aria-label="Filter by folder" title="Filter by folder">
         <option value="">All Folders</option>
@@ -189,6 +191,8 @@ function buildHTML(): string {
         ★ Favorites
       </button>
     </div>
+
+    <div class="nlm-toolbar__sep" aria-hidden="true"></div>
 
     <div class="nlm-toolbar__sort">
       <select class="nlm-sort-by nlm-select" aria-label="Sort by" title="Sort notebooks by">

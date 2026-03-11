@@ -260,52 +260,21 @@ export function extractNotebookIdFromElement(el: Element): string | null {
  * Finds the container element that holds all notebook cards.
  */
 export function findNotebookGrid(): Element | null {
-  const cardSelector = getNotebookCardSelector();
+  // Find the first non-featured project-button (a user's own notebook card)
+  const userCard = Array.from(document.querySelectorAll('project-button'))
+    .find((el) => !isFeaturedCard(el));
 
-  // Strategy 1: find a project-grid that contains at least one non-featured card
-  const allGrids = Array.from(document.querySelectorAll('project-grid'));
-  for (const grid of allGrids) {
-    const cards = Array.from(grid.querySelectorAll(cardSelector));
-    const hasUserCard = cards.some((c) => !isFeaturedCard(c));
-    if (hasUserCard) {
-      logger.log('findNotebookGrid: found project-grid with user notebooks');
-      return grid;
-    }
+  if (!userCard) {
+    logger.warn('findNotebookGrid: no user notebook cards found');
+    return null;
   }
 
-  // Strategy 2: configured grid selectors that contain a non-featured card
-  const selList = SELECTORS.notebookGrid.split(',').map((s) => s.trim());
-  for (const sel of selList) {
-    try {
-      const el = document.querySelector(sel);
-      if (el) {
-        const cards = Array.from(el.querySelectorAll(cardSelector));
-        if (cards.some((c) => !isFeaturedCard(c))) {
-          logger.log(`findNotebookGrid: found via "${sel}"`);
-          return el;
-        }
-      }
-    } catch {
-      // ignore
-    }
-  }
-
-  // Strategy 3: parent of the first non-featured card element
-  for (const cardSel of SELECTORS.notebookCardSelectors) {
-    try {
-      const allCards = Array.from(document.querySelectorAll(cardSel));
-      const firstUserCard = allCards.find((c) => !isFeaturedCard(c));
-      if (firstUserCard) {
-        const grid = firstUserCard.closest('project-grid, ul, ol, div[class], main');
-        if (grid) {
-          logger.log(`findNotebookGrid: found via non-featured card parent (${grid.tagName})`);
-          return grid;
-        }
-        return firstUserCard.parentElement;
-      }
-    } catch {
-      // ignore
-    }
+  // Walk up to find the nearest project-grid ancestor.
+  // If user's notebooks are not inside a project-grid, fall back to direct parent.
+  const grid = userCard.closest('project-grid') ?? userCard.parentElement;
+  if (grid) {
+    logger.log(`findNotebookGrid: found ${grid.tagName}.${grid.className}`);
+    return grid;
   }
 
   return null;
