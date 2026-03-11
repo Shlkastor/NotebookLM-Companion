@@ -18,7 +18,7 @@ import { ELEMENT_WAIT_TIMEOUT_MS, TOOLBAR_ID, SIDEBAR_ID, PANEL_ID } from '../ut
 import { storageManager } from '../storage/storageManager.js';
 import { store } from '../state/store.js';
 import { startObserver } from './observer.js';
-import { parseNotebookCards, findNotebookGrid } from './parser.js';
+import { parseNotebookCards, findNotebookGrid, getNotebookCardSelector } from './parser.js';
 import { initToolbar, setToolbarCards, updateToolbarOptions } from '../ui/toolbar.js';
 import { initSidebar, updateSidebar } from '../ui/sidebar.js';
 import { renderBadges } from '../ui/notebookBadges.js';
@@ -111,14 +111,69 @@ async function handleNavigation(url: string): Promise<void> {
 async function initHomePage(): Promise<void> {
   logger.log('initHomePage: waiting for notebook cards…');
 
-  // Wait for at least one notebook link to appear
+  // Try the primary anchor selector first
+  const cardSelector = getNotebookCardSelector();
+  let timedOut = false;
+
   try {
-    await waitForElement('a[href*="/notebook/"]', ELEMENT_WAIT_TIMEOUT_MS);
+    await waitForElement(cardSelector, ELEMENT_WAIT_TIMEOUT_MS);
   } catch {
-    logger.warn('initHomePage: no notebook cards appeared within timeout — nothing to do');
+    // Primary selector timed out — fall back to waiting for any main content
+    logger.warn('initHomePage: primary selector timed out, trying broader wait…');
+    timedOut = true;
+    try {
+      await waitForElement('main, [role="main"], app-root, body > div', 5000);
+    } catch {
+      // ignore — proceed anyway and let the observer below pick things up
+    }
+  }
+
+  // If we already have cards, proceed immediately. Otherwise start a persistent
+  // observer that will call mountHomePageUI() the first time cards appear.
+  const cards = parseNotebookCards();
+  if (cards.length > 0) {
+    mountHomePageUI(cards);
     return;
   }
 
+  if (timedOut) {
+    logger.warn('initHomePage: no cards found yet — starting persistent DOM observer');
+    // Diagnostic: log all anchor hrefs to help identify the correct selector
+    const allAnchors = Array.from(document.querySelectorAll<HTMLAnchorElement>('a[href]'))
+      .map((a) => a.getAttribute('href'))
+      .filter(Boolean)
+      .slice(0, 30);
+    logger.log('initHomePage: sample anchor hrefs on page:', allAnchors);
+  }
+
+  // Persistent observer: watches the whole document for new anchors that look
+  // like notebook links. Fires at most once per page load.
+  let resolved = false;
+  const ABSOLUTE_TIMEOUT_MS = 60_000;
+  const absoluteTimer = setTimeout(() => {
+    if (!resolved) {
+      resolved = true;
+      persistentObserver.disconnect();
+      logger.warn('initHomePage: gave up after 60s — no notebook cards appeared');
+    }
+  }, ABSOLUTE_TIMEOUT_MS);
+
+  const persistentObserver = new MutationObserver(() => {
+    if (resolved) return;
+    const lateCards = parseNotebookCards();
+    if (lateCards.length > 0) {
+      resolved = true;
+      clearTimeout(absoluteTimer);
+      persistentObserver.disconnect();
+      logger.log(`initHomePage: persistent observer found ${lateCards.length} cards`);
+      mountHomePageUI(lateCards);
+    }
+  });
+
+  persistentObserver.observe(document.body, { childList: true, subtree: true });
+}
+
+function mountHomePageUI(cards: ReturnType<typeof parseNotebookCards>): void {
   const grid = findNotebookGrid();
   if (!grid) {
     logger.warn('initHomePage: could not identify notebook grid container');
@@ -131,7 +186,6 @@ async function initHomePage(): Promise<void> {
     return;
   }
 
-  const cards = parseNotebookCards();
   const notebooks = store.get('notebooks');
   const accountScope = store.get('currentAccountScope');
 

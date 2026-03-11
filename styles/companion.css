@@ -212,11 +212,11 @@
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  padding: 8px 12px;
-  background: var(--nlm-surface);
-  border-bottom: 1px solid var(--nlm-border);
-  border-radius: var(--nlm-radius) var(--nlm-radius) 0 0;
-  box-shadow: var(--nlm-shadow-sm);
+  padding: 6px 4px 10px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
   position: sticky;
   top: 0;
   z-index: var(--nlm-z-toolbar);
