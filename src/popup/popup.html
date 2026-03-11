@@ -5,172 +5,274 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>NotebookLM Companion</title>
     <style>
-      /* ── Reset ─────────────────────────────────────────────────────────────── */
       *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-      /* ── Base ──────────────────────────────────────────────────────────────── */
       body {
         font-family: 'Google Sans', Roboto, Arial, sans-serif;
-        width: 320px;
-        background: #ffffff;
+        width: 380px;
+        background: #f8f9fa;
         color: #202124;
         font-size: 14px;
         line-height: 1.5;
       }
 
-      /* ── Header ────────────────────────────────────────────────────────────── */
+      /* ── Header ── */
       .header {
-        background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%);
+        background: #1a73e8;
+        background-image: radial-gradient(ellipse at 80% 50%, rgba(255,255,255,0.10) 0%, transparent 70%),
+                          linear-gradient(135deg, #1a73e8 0%, #1250aa 100%);
         color: white;
-        padding: 14px 16px;
+        padding: 18px 20px 16px;
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 12px;
+        position: relative;
+        overflow: hidden;
       }
-      .header__logo { font-size: 22px; line-height: 1; }
-      .header__title { font-size: 15px; font-weight: 500; letter-spacing: 0.1px; }
+      .header::after {
+        content: '';
+        position: absolute;
+        right: -20px; bottom: -20px;
+        width: 100px; height: 100px;
+        background: rgba(255,255,255,0.06);
+        border-radius: 50%;
+      }
+      .header__logo {
+        font-size: 26px;
+        line-height: 1;
+        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+        flex-shrink: 0;
+      }
+      .header__text { flex: 1; }
+      .header__title {
+        font-size: 16px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        line-height: 1.2;
+      }
+      .header__sub {
+        font-size: 11px;
+        opacity: 0.75;
+        font-weight: 400;
+        margin-top: 1px;
+      }
 
-      /* ── Body ──────────────────────────────────────────────────────────────── */
+      /* ── Body ── */
       .body { padding: 16px; }
 
-      /* ── Section title ─────────────────────────────────────────────────────── */
+      /* ── Section title ── */
       .section-title {
-        font-size: 11px;
-        font-weight: 600;
-        color: #5f6368;
+        font-size: 10px;
+        font-weight: 700;
+        color: #80868b;
         text-transform: uppercase;
-        letter-spacing: 0.8px;
+        letter-spacing: 1px;
         margin-bottom: 10px;
       }
 
-      /* ── Stats grid ────────────────────────────────────────────────────────── */
+      /* ── Stats grid ── */
       .stats-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 8px;
-        margin-bottom: 14px;
+        margin-bottom: 12px;
       }
       .stat-card {
-        background: #f8f9fa;
+        background: #ffffff;
         border: 1px solid #e8eaed;
-        border-radius: 8px;
-        padding: 10px 12px;
+        border-radius: 12px;
+        padding: 14px 12px 12px;
         text-align: center;
+        transition: box-shadow 0.15s, border-color 0.15s;
+        cursor: default;
       }
-      .stat-card__value { font-size: 22px; font-weight: 600; color: #1a73e8; line-height: 1.2; }
-      .stat-card__label { font-size: 11px; color: #5f6368; margin-top: 2px; }
-
-      /* ── Accounts ──────────────────────────────────────────────────────────── */
-      .accounts {
-        font-size: 12px;
-        color: #5f6368;
-        margin-bottom: 12px;
-        padding: 6px 8px;
-        background: #f8f9fa;
-        border-radius: 6px;
-        min-height: 28px;
+      .stat-card:hover {
+        border-color: #c5cae9;
+        box-shadow: 0 2px 8px rgba(26,115,232,0.10);
       }
-      .accounts__label { font-weight: 500; }
+      .stat-card__icon {
+        font-size: 18px;
+        line-height: 1;
+        margin-bottom: 6px;
+        display: block;
+      }
+      .stat-card__value {
+        font-size: 28px;
+        font-weight: 700;
+        color: #1a73e8;
+        line-height: 1;
+        letter-spacing: -0.02em;
+      }
+      .stat-card__label {
+        font-size: 11px;
+        color: #80868b;
+        margin-top: 4px;
+        font-weight: 500;
+      }
 
-      /* ── Divider ───────────────────────────────────────────────────────────── */
-      .divider { border: none; border-top: 1px solid #f1f3f4; margin: 12px 0; }
+      /* ── Accounts ── */
+      .accounts-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: #ffffff;
+        border: 1px solid #e8eaed;
+        border-radius: 10px;
+        padding: 8px 12px;
+        margin-bottom: 14px;
+        min-height: 36px;
+      }
+      .accounts-icon { font-size: 14px; flex-shrink: 0; opacity: 0.6; }
+      .accounts-text { font-size: 12px; color: #5f6368; }
+      .accounts-text strong { color: #3c4043; font-weight: 600; }
 
-      /* ── Buttons ───────────────────────────────────────────────────────────── */
+      /* ── Divider ── */
+      .divider {
+        border: none;
+        border-top: 1px solid #e8eaed;
+        margin: 14px 0 12px;
+      }
+
+      /* ── Buttons ── */
       .btn {
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 6px;
+        gap: 8px;
         width: 100%;
-        padding: 9px 16px;
+        height: 40px;
+        padding: 0 16px;
         border: 1px solid #dadce0;
-        border-radius: 6px;
+        border-radius: 999px;
         background: #ffffff;
-        color: #202124;
+        color: #3c4043;
         font-size: 13px;
+        font-weight: 500;
         font-family: inherit;
         cursor: pointer;
-        transition: background 0.15s, border-color 0.15s;
+        transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
         margin-bottom: 8px;
+        letter-spacing: 0.01em;
       }
-      .btn:hover { background: #f8f9fa; }
+      .btn:hover {
+        background: #f8f9fa;
+        border-color: #bdc1c6;
+        box-shadow: 0 1px 3px rgba(60,64,67,0.12);
+      }
       .btn:active { background: #f1f3f4; }
       .btn--primary {
         background: #1a73e8;
         color: white;
         border-color: #1a73e8;
+        box-shadow: 0 1px 3px rgba(26,115,232,0.3);
       }
-      .btn--primary:hover { background: #1765cc; border-color: #1765cc; }
-      .btn:last-child { margin-bottom: 0; }
+      .btn--primary:hover {
+        background: #1765cc;
+        border-color: #1765cc;
+        box-shadow: 0 2px 6px rgba(26,115,232,0.35);
+      }
+      .btn-icon { font-size: 14px; }
 
-      /* ── Status message ────────────────────────────────────────────────────── */
+      /* ── Status message ── */
       .status {
-        font-size: 13px;
-        padding: 8px 10px;
-        border-radius: 6px;
+        font-size: 12px;
+        padding: 8px 12px;
+        border-radius: 8px;
         margin-top: 10px;
         display: none;
+        font-weight: 500;
       }
-      .status--success { display: block; background: #e6f4ea; color: #137333; }
-      .status--error   { display: block; background: #fce8e6; color: #c5221f; }
+      .status--success {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background: #e6f4ea;
+        color: #137333;
+        border: 1px solid #ceead6;
+      }
+      .status--error {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background: #fce8e6;
+        color: #c5221f;
+        border: 1px solid #f5c6c2;
+      }
 
-      /* ── Footer link ───────────────────────────────────────────────────────── */
+      /* ── Footer link ── */
       .footer-link {
-        display: block;
-        text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
         color: #1a73e8;
         text-decoration: none;
-        font-size: 13px;
+        font-size: 12px;
+        font-weight: 500;
         margin-top: 14px;
-        padding: 4px 0;
+        padding: 6px 0;
+        opacity: 0.85;
+        transition: opacity 0.15s;
       }
-      .footer-link:hover { text-decoration: underline; }
+      .footer-link:hover { opacity: 1; text-decoration: underline; }
 
-      /* ── Hidden file input ─────────────────────────────────────────────────── */
+      /* ── Hidden file input ── */
       #import-file { display: none; }
     </style>
   </head>
   <body>
-    <!-- Header -->
     <header class="header">
       <span class="header__logo" aria-hidden="true">📚</span>
-      <h1 class="header__title">NotebookLM Companion</h1>
+      <div class="header__text">
+        <h1 class="header__title">NotebookLM Companion</h1>
+        <p class="header__sub">Organization layer for NotebookLM</p>
+      </div>
     </header>
 
-    <!-- Body -->
     <main class="body">
       <!-- Stats -->
       <p class="section-title">Statistics</p>
       <div class="stats-grid" role="list">
         <div class="stat-card" role="listitem">
+          <span class="stat-card__icon">📓</span>
           <div class="stat-card__value" id="stat-notebooks">–</div>
           <div class="stat-card__label">Notebooks</div>
         </div>
         <div class="stat-card" role="listitem">
+          <span class="stat-card__icon">⭐</span>
           <div class="stat-card__value" id="stat-favorites">–</div>
           <div class="stat-card__label">Favorites</div>
         </div>
         <div class="stat-card" role="listitem">
+          <span class="stat-card__icon">📁</span>
           <div class="stat-card__value" id="stat-folders">–</div>
           <div class="stat-card__label">Folders</div>
         </div>
         <div class="stat-card" role="listitem">
+          <span class="stat-card__icon">🏷️</span>
           <div class="stat-card__value" id="stat-tags">–</div>
           <div class="stat-card__label">Tags</div>
         </div>
       </div>
 
       <!-- Accounts -->
-      <div class="accounts" id="accounts-info" aria-label="Active accounts">
-        <span class="accounts__label">Accounts:</span> <span id="accounts-list">loading…</span>
+      <div class="accounts-row" id="accounts-info" aria-label="Active accounts">
+        <span class="accounts-icon">👤</span>
+        <span class="accounts-text">
+          <strong>Account:</strong> <span id="accounts-list">loading…</span>
+        </span>
       </div>
 
       <hr class="divider" />
 
       <!-- Data actions -->
       <p class="section-title">Data</p>
-      <button class="btn btn--primary" id="export-btn">⬇ Export JSON</button>
-      <button class="btn" id="import-btn">⬆ Import JSON</button>
+      <button class="btn btn--primary" id="export-btn">
+        <span class="btn-icon">⬇</span> Export JSON
+      </button>
+      <button class="btn" id="import-btn">
+        <span class="btn-icon">⬆</span> Import JSON
+      </button>
       <input type="file" id="import-file" accept=".json,application/json" aria-hidden="true" />
 
       <!-- Status feedback -->
