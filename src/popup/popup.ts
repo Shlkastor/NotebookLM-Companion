@@ -67,18 +67,32 @@ async function handleExport(): Promise<void> {
   try {
     const result = await sendMessage<{ json: string }>({ type: 'EXPORT_DATA' });
     const blob = new Blob([result.json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
+    const fileName = `notebooklm-companion-${formatDate(new Date())}.json`;
 
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `notebooklm-companion-${formatDate(new Date())}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    // Use File System Access API if available (lets user pick save location)
+    if ('showSaveFilePicker' in window) {
+      const handle = await (window as any).showSaveFilePicker({
+        suggestedName: fileName,
+        types: [{ description: 'JSON file', accept: { 'application/json': ['.json'] } }],
+      });
+      const writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+    } else {
+      // Fallback: standard download
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
 
     showStatus('Export successful!', 'success');
-  } catch (err) {
+  } catch (err: any) {
+    if (err?.name === 'AbortError') return; // user cancelled picker
     showStatus(`Export failed: ${String(err)}`, 'error');
   }
 }
