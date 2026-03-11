@@ -18,7 +18,7 @@ import { copyFileSync, mkdirSync, readdirSync, existsSync, statSync } from 'fs';
 import { join, resolve } from 'path';
 
 const isWatch = process.argv.includes('--watch');
-const isDev = isWatch;
+const isDev = isWatch || process.argv.includes('--dev');
 
 // ─── Shared esbuild options ──────────────────────────────────────────────────
 const sharedConfig = {
