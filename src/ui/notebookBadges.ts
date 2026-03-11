@@ -72,7 +72,7 @@ function renderBadge(
 
     try {
       const current = await storageManager.getNotebook(accountScope, card.notebookId);
-      const updated = await openEditModal(card.notebookId, card.title, accountScope, current);
+      const updated = await openEditModal(card.notebookId, card.title, accountScope, current, store.get('notebooks'));
 
       if (updated) {
         await storageManager.setNotebook(accountScope, card.notebookId, updated);

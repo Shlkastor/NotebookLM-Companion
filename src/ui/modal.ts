@@ -15,6 +15,7 @@ export function openEditModal(
   title: string,
   _accountScope: string,
   meta: NotebookMetadata,
+  allNotebooks: Record<string, NotebookMetadata> = {},
 ): Promise<NotebookMetadata | null> {
   return new Promise((resolve) => {
     // Remove any stale modal
@@ -26,7 +27,7 @@ export function openEditModal(
     overlay.setAttribute('role', 'dialog');
     overlay.setAttribute('aria-modal', 'true');
     overlay.setAttribute('aria-label', `Edit metadata for ${title}`);
-    overlay.innerHTML = buildModalHTML(title, meta);
+    overlay.innerHTML = buildModalHTML(title, meta, allNotebooks);
 
     document.body.appendChild(overlay);
     // Force reflow before adding --visible to enable CSS transitions
@@ -34,6 +35,67 @@ export function openEditModal(
     overlay.classList.add('nlm-modal-overlay--visible');
 
     const modal = overlay.querySelector<HTMLElement>('.nlm-modal')!;
+
+    // ── Smart folder: auto-fill color + suggest tags ──────────────────────
+    const folderInput = modal.querySelector<HTMLInputElement>('[name="folder"]')!;
+    const colorInput = modal.querySelector<HTMLInputElement>('[name="color"]')!;
+    const tagsInput = modal.querySelector<HTMLInputElement>('[name="tags"]')!;
+    const suggestionsEl = modal.querySelector<HTMLElement>('.nlm-tag-suggestions')!;
+
+    function onFolderChange(): void {
+      const folder = folderInput.value.trim();
+      if (!folder) { suggestionsEl.innerHTML = ''; return; }
+
+      const inFolder = Object.entries(allNotebooks)
+        .filter(([id, m]) => id !== notebookId && m.folder === folder)
+        .map(([, m]) => m);
+
+      // Most common color among notebooks in this folder
+      if (inFolder.length > 0) {
+        const colorCount: Record<string, number> = {};
+        for (const m of inFolder) {
+          if (m.color) colorCount[m.color] = (colorCount[m.color] ?? 0) + 1;
+        }
+        const topColor = Object.entries(colorCount).sort((a, b) => b[1] - a[1])[0]?.[0];
+        if (topColor) colorInput.value = topColor;
+      }
+
+      // Tag suggestions (frequency sorted, exclude already-added tags)
+      const tagCount: Record<string, number> = {};
+      for (const m of inFolder) {
+        for (const t of m.tags) tagCount[t] = (tagCount[t] ?? 0) + 1;
+      }
+      const currentTags = tagsInput.value.split(',').map((t) => t.trim()).filter(Boolean);
+      const suggestions = Object.entries(tagCount)
+        .filter(([t]) => !currentTags.includes(t))
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 8)
+        .map(([t]) => t);
+
+      if (suggestions.length === 0) { suggestionsEl.innerHTML = ''; return; }
+
+      suggestionsEl.innerHTML = suggestions
+        .map(
+          (t) =>
+            `<button type="button" class="nlm-tag-suggestion" data-tag="${escHtml(t)}">${escHtml(t)}</button>`,
+        )
+        .join('');
+    }
+
+    folderInput.addEventListener('input', onFolderChange);
+    folderInput.addEventListener('change', onFolderChange);
+
+    // Clicking a suggestion pill appends the tag
+    suggestionsEl.addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('.nlm-tag-suggestion');
+      if (!btn) return;
+      const tag = btn.dataset['tag']!;
+      const current = tagsInput.value.split(',').map((t) => t.trim()).filter(Boolean);
+      if (!current.includes(tag)) {
+        tagsInput.value = [...current, tag].join(', ');
+      }
+      btn.remove();
+    });
 
     function close(result: NotebookMetadata | null): void {
       overlay.classList.remove('nlm-modal-overlay--visible');
@@ -82,9 +144,17 @@ export function openEditModal(
 
 // ─── HTML ─────────────────────────────────────────────────────────────────────
 
-function buildModalHTML(title: string, meta: NotebookMetadata): string {
+function buildModalHTML(
+  title: string,
+  meta: NotebookMetadata,
+  allNotebooks: Record<string, NotebookMetadata>,
+): string {
   const tags = meta.tags.join(', ');
   const colorVal = meta.color ?? '#1a73e8';
+
+  // Build datalist options from all existing folders
+  const folders = [...new Set(Object.values(allNotebooks).map((m) => m.folder).filter(Boolean) as string[])].sort();
+  const folderOptions = folders.map((f) => `<option value="${escHtml(f)}"></option>`).join('');
 
   return `
     <div class="nlm-modal">
@@ -105,7 +175,9 @@ function buildModalHTML(title: string, meta: NotebookMetadata): string {
             value="${escHtml(meta.folder ?? '')}"
             placeholder="e.g. Work, Research, Personal…"
             autocomplete="off"
+            list="nlm-folders-list"
           />
+          <datalist id="nlm-folders-list">${folderOptions}</datalist>
         </label>
 
         <label class="nlm-label">
@@ -119,6 +191,7 @@ function buildModalHTML(title: string, meta: NotebookMetadata): string {
             autocomplete="off"
           />
         </label>
+        <div class="nlm-tag-suggestions" aria-label="Suggested tags"></div>
 
         <label class="nlm-label">
           <span class="nlm-label__text">Status</span>

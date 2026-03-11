@@ -938,3 +938,31 @@
   min-width: 88px;
   justify-content: center;
 }
+
+/* ── Tag suggestions (in modal, below tags input) ─────────────────────────── */
+
+.nlm-tag-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+  min-height: 0;
+}
+
+.nlm-tag-suggestion {
+  background: var(--nlm-primary-light);
+  color: var(--nlm-primary);
+  border: 1px solid #c5d8fb;
+  border-radius: var(--nlm-radius-pill);
+  padding: 2px 10px;
+  font-size: 12px;
+  font-family: var(--nlm-font);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--nlm-transition), border-color var(--nlm-transition);
+}
+
+.nlm-tag-suggestion:hover {
+  background: #d2e3fc;
+  border-color: var(--nlm-primary);
+}
