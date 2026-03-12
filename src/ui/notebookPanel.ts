@@ -20,24 +20,28 @@ export function initNotebookPanel(
   notebookId: string,
   accountScope: string,
   meta: NotebookMetadata,
+  allNotebooks: Record<string, NotebookMetadata> = {},
 ): void {
   document.getElementById(PANEL_ID)?.remove();
 
   const panel = document.createElement('div');
   panel.id = PANEL_ID;
   panel.className = 'nlm-panel nlm-panel--collapsed';
-  panel.innerHTML = buildHTML(meta);
+  panel.innerHTML = buildHTML(meta, allNotebooks);
 
   document.body.appendChild(panel);
-  bindEvents(panel, notebookId, accountScope);
+  bindEvents(panel, notebookId, accountScope, allNotebooks);
 
   logger.log(`Notebook panel mounted for ${notebookId}`);
 }
 
 // ─── HTML ─────────────────────────────────────────────────────────────────────
 
-function buildHTML(meta: NotebookMetadata): string {
+function buildHTML(meta: NotebookMetadata, allNotebooks: Record<string, NotebookMetadata>): string {
   const tags = meta.tags.join(', ');
+
+  const folders = [...new Set(Object.values(allNotebooks).map((m) => m.folder).filter(Boolean) as string[])].sort();
+  const folderOptions = folders.map((f) => `<option value="${escHtml(f)}"></option>`).join('');
 
   return `
     <button class="nlm-panel__tab" aria-label="Toggle Companion panel" title="Toggle Companion">
@@ -61,7 +65,9 @@ function buildHTML(meta: NotebookMetadata): string {
             value="${escHtml(meta.folder ?? '')}"
             placeholder="e.g. Work, Research…"
             autocomplete="off"
+            list="nlm-panel-folders-list"
           />
+          <datalist id="nlm-panel-folders-list">${folderOptions}</datalist>
         </label>
 
         <label class="nlm-label">
@@ -75,6 +81,7 @@ function buildHTML(meta: NotebookMetadata): string {
             autocomplete="off"
           />
         </label>
+        <div class="nlm-tag-suggestions" aria-label="Suggested tags"></div>
 
         <label class="nlm-label">
           <span class="nlm-label__text">Status</span>
@@ -125,16 +132,78 @@ function buildHTML(meta: NotebookMetadata): string {
 
 // ─── Events ───────────────────────────────────────────────────────────────────
 
-function bindEvents(panel: HTMLElement, notebookId: string, accountScope: string): void {
+function bindEvents(
+  panel: HTMLElement,
+  notebookId: string,
+  accountScope: string,
+  allNotebooks: Record<string, NotebookMetadata>,
+): void {
   const tab = panel.querySelector<HTMLButtonElement>('.nlm-panel__tab')!;
   const tabIcon = tab.querySelector<HTMLSpanElement>('.nlm-panel__tab-icon')!;
   const savedIndicator = panel.querySelector<HTMLElement>('.nlm-panel__saved-indicator')!;
+  const folderInput = panel.querySelector<HTMLInputElement>('[name="folder"]')!;
+  const colorInput = panel.querySelector<HTMLInputElement>('[name="color"]')!;
+  const tagsInput = panel.querySelector<HTMLInputElement>('[name="tags"]')!;
+  const suggestionsEl = panel.querySelector<HTMLElement>('.nlm-tag-suggestions')!;
 
   // Toggle collapse
   tab.addEventListener('click', () => {
     const collapsed = panel.classList.toggle('nlm-panel--collapsed');
     tabIcon.textContent = collapsed ? '◀' : '▶';
     tab.setAttribute('aria-expanded', String(!collapsed));
+  });
+
+  // Smart folder: auto-fill color + suggest tags
+  function onFolderChange(): void {
+    const folder = folderInput.value.trim();
+    if (!folder) { suggestionsEl.innerHTML = ''; return; }
+
+    const inFolder = Object.entries(allNotebooks)
+      .filter(([id, m]) => id !== notebookId && m.folder === folder)
+      .map(([, m]) => m);
+
+    if (inFolder.length > 0) {
+      const colorCount: Record<string, number> = {};
+      for (const m of inFolder) {
+        if (m.color) colorCount[m.color] = (colorCount[m.color] ?? 0) + 1;
+      }
+      const topColor = Object.entries(colorCount).sort((a, b) => b[1] - a[1])[0]?.[0];
+      if (topColor) colorInput.value = topColor;
+    }
+
+    const tagCount: Record<string, number> = {};
+    for (const m of inFolder) {
+      for (const t of m.tags) tagCount[t] = (tagCount[t] ?? 0) + 1;
+    }
+    const currentTags = tagsInput.value.split(',').map((t) => t.trim()).filter(Boolean);
+    const suggestions = Object.entries(tagCount)
+      .filter(([t]) => !currentTags.includes(t))
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      .map(([t]) => t);
+
+    if (suggestions.length === 0) { suggestionsEl.innerHTML = ''; return; }
+
+    suggestionsEl.innerHTML = suggestions
+      .map(
+        (t) =>
+          `<button type="button" class="nlm-tag-suggestion" data-tag="${escHtml(t)}">${escHtml(t)}</button>`,
+      )
+      .join('');
+  }
+
+  folderInput.addEventListener('input', onFolderChange);
+  folderInput.addEventListener('change', onFolderChange);
+
+  suggestionsEl.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('.nlm-tag-suggestion');
+    if (!btn) return;
+    const tag = btn.dataset['tag']!;
+    const current = tagsInput.value.split(',').map((t) => t.trim()).filter(Boolean);
+    if (!current.includes(tag)) {
+      tagsInput.value = [...current, tag].join(', ');
+    }
+    btn.remove();
   });
 
   // Autosave with debounce

@@ -220,7 +220,8 @@ async function initNotebookPage(notebookId: string, accountScope: string): Promi
   }
 
   const meta = await storageManager.getNotebook(accountScope, notebookId);
-  initNotebookPanel(notebookId, accountScope, meta);
+  const allNotebooks = store.get('notebooks');
+  initNotebookPanel(notebookId, accountScope, meta, allNotebooks);
 
   logger.log('initNotebookPage: panel injected');
 }
